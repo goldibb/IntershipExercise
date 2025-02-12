@@ -2,8 +2,9 @@
 
 import (
 	"fmt"
-	"github.com/xuri/excelize/v2"
 	"strings"
+
+	"github.com/xuri/excelize/v2"
 )
 
 type SwiftRecord struct {
@@ -38,15 +39,20 @@ func ParsedExcelFile(filePath string) (*ParsedData, error) {
 			continue
 		}
 
-		adress := row[4]
+		// Validate SWIFT code format
+		if len(row[1]) != 11 {
+			return nil, fmt.Errorf("invalid SWIFT code length in row %d: %s", i+1, row[1])
+		}
+
+		adress := strings.TrimSpace(row[4])
 		if adress == "" {
-			adress = row[5]
+			adress = strings.TrimSpace(row[4])
 		}
 		swiftRecord := SwiftRecord{
 			CountryISO2:   row[0],
 			SwiftCode:     row[1],
 			BankName:      row[3],
-			Address:       strings.TrimSpace(adress),
+			Address:       adress,
 			CountryName:   row[6],
 			IsHeadquarter: isHeadquarterCode(row[1]),
 		}

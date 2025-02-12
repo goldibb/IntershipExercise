@@ -20,19 +20,17 @@ func (h *Handler) RegisterRoutes(router *mux.Router) {
 }
 
 func (h *Handler) getSwiftCode() http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// get swift code by swift_code
-	})
+	return nil
 }
 
 func (h *Handler) getSwiftCodesByCountry() http.Handler {
-
+	return nil
 }
 
 func (h *Handler) CreateSwiftCode() http.Handler {
-
+	return nil
 }
 
 func (h *Handler) DeleteSwiftCode() http.Handler {
-
+	return nil
 }

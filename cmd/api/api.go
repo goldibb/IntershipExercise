@@ -3,8 +3,9 @@ package api
 import (
 	"IntershipExercise/service"
 	"database/sql"
-	"github.com/gorilla/mux"
 	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 type APIServer struct {
