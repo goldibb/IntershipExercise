@@ -1,4 +1,4 @@
-﻿package parser
+package parser
 
 import (
 	"fmt"
@@ -26,7 +26,12 @@ func ParsedExcelFile(filePath string) (*ParsedData, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open file: %w", err)
 	}
-	defer f.Close()
+	defer func(f *excelize.File) {
+		err := f.Close()
+		if err != nil {
+			fmt.Printf("failed to close file: %v", err)
+		}
+	}(f)
 
 	rows, err := f.GetRows("Sheet1")
 	if err != nil {
@@ -46,7 +51,7 @@ func ParsedExcelFile(filePath string) (*ParsedData, error) {
 
 		adress := strings.TrimSpace(row[4])
 		if adress == "" {
-			adress = strings.TrimSpace(row[4])
+			adress = strings.TrimSpace(row[5]) + ", " + strings.TrimSpace(row[6])
 		}
 		swiftRecord := SwiftRecord{
 			CountryISO2:   row[0],

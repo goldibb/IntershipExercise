@@ -46,8 +46,14 @@ func SaveParsedData(data *parser.ParsedData) error {
 	if err != nil {
 		return fmt.Errorf("failed to start transaction: %w", err)
 	}
-	defer tx.Rollback()
+	defer func(tx *sql.Tx) {
+		err := tx.Rollback()
+		if err != nil {
+			fmt.Printf("failed to rollback transaction: %v", err)
+		}
+	}(tx)
 
+	// Insert countries
 	for _, hq := range data.Headquarters {
 		_, err := tx.Exec(`
             INSERT INTO countries (iso2_code, name)
@@ -59,61 +65,39 @@ func SaveParsedData(data *parser.ParsedData) error {
 		}
 	}
 
+	// Insert headquarters
 	for _, hq := range data.Headquarters {
 		_, err := tx.Exec(`
             INSERT INTO swift_codes (
-                swift_code, address, bank_name, country_iso2, 
-                is_headquarter, headquarters_swift_code
+                swift_code, address, bank_name, country_iso2,
+                is_headquarter
             )
-            VALUES ($1, $2, $3, $4, true, NULL)
+            VALUES ($1, $2, $3, $4, true)
             ON CONFLICT (swift_code) DO UPDATE SET
                 address = EXCLUDED.address,
                 bank_name = EXCLUDED.bank_name,
                 country_iso2 = EXCLUDED.country_iso2,
-                is_headquarter = true,
-                headquarters_swift_code = NULL
+                is_headquarter = true
         `, hq.SwiftCode, hq.Address, hq.BankName, hq.CountryISO2)
 		if err != nil {
 			return fmt.Errorf("failed to insert headquarter %s: %w", hq.SwiftCode, err)
 		}
 	}
 
-	// Save branches with proper headquarters linking
+	// Insert branches
 	for _, branch := range data.Branches {
-		bankPrefix := branch.SwiftCode[:7]
-		hqSwift := bankPrefix + "XXX"
-
-		// Check if headquarters exists
-		var exists bool
-		err := tx.QueryRow(`
-            SELECT EXISTS(
-                SELECT 1 FROM swift_codes 
-                WHERE swift_code = $1 AND is_headquarter = true
-            )
-        `, hqSwift).Scan(&exists)
-		if err != nil {
-			return fmt.Errorf("failed to check headquarter existence: %w", err)
-		}
-
-		// Set headquarters_swift_code based on existence
-		var headquartersCode *string
-		if exists {
-			headquartersCode = &hqSwift
-		}
-
-		_, err = tx.Exec(`
+		_, err := tx.Exec(`
             INSERT INTO swift_codes (
-                swift_code, address, bank_name, country_iso2, 
-                is_headquarter, headquarters_swift_code
+                swift_code, address, bank_name, country_iso2,
+                is_headquarter
             )
-            VALUES ($1, $2, $3, $4, false, $5)
+            VALUES ($1, $2, $3, $4, false)
             ON CONFLICT (swift_code) DO UPDATE SET
                 address = EXCLUDED.address,
                 bank_name = EXCLUDED.bank_name,
                 country_iso2 = EXCLUDED.country_iso2,
-                is_headquarter = false,
-                headquarters_swift_code = EXCLUDED.headquarters_swift_code
-        `, branch.SwiftCode, branch.Address, branch.BankName, branch.CountryISO2, headquartersCode)
+                is_headquarter = false
+        `, branch.SwiftCode, branch.Address, branch.BankName, branch.CountryISO2)
 		if err != nil {
 			return fmt.Errorf("failed to insert branch %s: %w", branch.SwiftCode, err)
 		}
