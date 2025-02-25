@@ -211,6 +211,11 @@ func (h *Handler) CreateSwiftCode() http.Handler {
 			return
 		}
 
+		if swiftCode.IsHeadquarter && !strings.HasSuffix(swiftCode.SwiftCode, "XXX") {
+			WriteJSON(w, http.StatusBadRequest, ApiError{Message: "Headquarter SWIFT code must end with XXX"})
+			return
+		}
+
 		var countryExists bool
 		err := h.db.QueryRow("SELECT EXISTS(SELECT 1 FROM countries WHERE iso2_code = $1)",
 			swiftCode.CountryISO2).Scan(&countryExists)
