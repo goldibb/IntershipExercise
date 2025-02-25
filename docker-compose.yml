@@ -12,10 +12,12 @@ services:
       - DB_NAME=swift_codes
       - DB_PORT=5432
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+    volumes:
+      - ./data:/data
     networks:
       - swift_network
-    restart: on-failure
 
   db:
     image: postgres:16-alpine
@@ -32,7 +34,7 @@ services:
       - swift_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 10s
+      interval: 5s
       timeout: 5s
       retries: 5
 

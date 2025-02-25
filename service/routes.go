@@ -194,10 +194,44 @@ func (h *Handler) CreateSwiftCode() http.Handler {
 			return
 		}
 
-		_, err := h.db.Exec(`
-			INSERT INTO swift_codes (swift_code, address, bank_name, country_iso2, is_headquarter)
-			VALUES ($1, $2, $3, $4, $5)
-		`, swiftCode.SwiftCode, swiftCode.Address, swiftCode.BankName, swiftCode.CountryISO2, swiftCode.IsHeadquarter)
+		if len(swiftCode.SwiftCode) != 8 && len(swiftCode.SwiftCode) != 11 {
+			WriteJSON(w, http.StatusBadRequest, ApiError{Message: "SWIFT code must be 8 or 11 characters long"})
+			return
+		}
+
+		if swiftCode.BankName == "" || swiftCode.Address == "" || swiftCode.CountryISO2 == "" {
+			WriteJSON(w, http.StatusBadRequest, ApiError{Message: "Bank name, address and country code are required"})
+			return
+		}
+
+		var countryExists bool
+		err := h.db.QueryRow("SELECT EXISTS(SELECT 1 FROM countries WHERE iso2_code = $1)",
+			swiftCode.CountryISO2).Scan(&countryExists)
+		if err != nil {
+			WriteJSON(w, http.StatusInternalServerError, ApiError{Message: "Database error"})
+			return
+		}
+		if !countryExists {
+			WriteJSON(w, http.StatusBadRequest, ApiError{Message: "Invalid country code"})
+			return
+		}
+
+		var exists bool
+		err = h.db.QueryRow("SELECT EXISTS(SELECT 1 FROM swift_codes WHERE swift_code = $1)",
+			swiftCode.SwiftCode).Scan(&exists)
+		if err != nil {
+			WriteJSON(w, http.StatusInternalServerError, ApiError{Message: "Database error"})
+			return
+		}
+		if exists {
+			WriteJSON(w, http.StatusConflict, ApiError{Message: "SWIFT code already exists"})
+			return
+		}
+
+		_, err = h.db.Exec(`
+            INSERT INTO swift_codes (swift_code, address, bank_name, country_iso2, is_headquarter)
+            VALUES ($1, $2, $3, $4, $5)
+        `, swiftCode.SwiftCode, swiftCode.Address, swiftCode.BankName, swiftCode.CountryISO2, swiftCode.IsHeadquarter)
 		if err != nil {
 			WriteJSON(w, http.StatusInternalServerError, ApiError{Message: "Database error"})
 			return

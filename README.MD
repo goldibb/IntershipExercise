@@ -61,11 +61,44 @@ The application uses two main tables:
 - DB_PASSWORD: Database password (default: postgres)
 - DB_NAME: Database name (default: swift_codes)
 - DB_PORT: Database port (default: 5432)
-### Development
+### Local Development
 To run the application locally:
-1. Set up a PostgreSQL database
-2. Configure environment variables
+1. Set up environment variables:
+```bash
+export DB_HOST=localhost
+export DB_USER=postgres
+export DB_PASSWORD=postgres
+export DB_NAME=swift_codes
+export DB_PORT=5432
+```
+2. Create and initialize the database:
+```bash
+createdb swift_codes
+psql -d swift_codes -f migrations/init.sql
+```
 3. Run the application:
 ```bash
 go run cmd/main.go 
+```
+
+### Error Handling
+The API returns standard HTTP status codes:  
+- 200: Success
+- 201: Created
+- 400: Bad Request
+- 404: Not Found
+- 500: Internal Server Error
+
+### Container Management
+Stop the application:
+```bash
+docker-compose down
+```
+Remove volumes:
+```bash
+docker-compose down -v
+```
+View logs:
+```bash
+docker-compose logs -f
 ```
