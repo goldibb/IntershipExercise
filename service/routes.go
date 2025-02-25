@@ -187,9 +187,68 @@ func (h *Handler) getSwiftCodesByCountry() http.Handler {
 }
 
 func (h *Handler) CreateSwiftCode() http.Handler {
-	return nil
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var swiftCode models.Branch
+		if err := json.NewDecoder(r.Body).Decode(&swiftCode); err != nil {
+			WriteJSON(w, http.StatusBadRequest, ApiError{Message: "Invalid request payload"})
+			return
+		}
+
+		_, err := h.db.Exec(`
+			INSERT INTO swift_codes (swift_code, address, bank_name, country_iso2, is_headquarter)
+			VALUES ($1, $2, $3, $4, $5)
+		`, swiftCode.SwiftCode, swiftCode.Address, swiftCode.BankName, swiftCode.CountryISO2, swiftCode.IsHeadquarter)
+		if err != nil {
+			WriteJSON(w, http.StatusInternalServerError, ApiError{Message: "Database error"})
+			return
+		}
+
+		WriteJSON(w, http.StatusCreated, ApiError{Message: "Swift code created successfully"})
+	})
 }
 
 func (h *Handler) DeleteSwiftCode() http.Handler {
-	return nil
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		swiftCode := mux.Vars(r)["swift_code"]
+
+		tx, err := h.db.Begin()
+		if err != nil {
+			WriteJSON(w, http.StatusInternalServerError, ApiError{Message: "Database error"})
+			return
+		}
+		defer tx.Rollback()
+
+		var isHeadquarter bool
+		err = tx.QueryRow("SELECT is_headquarter FROM swift_codes WHERE swift_code = $1", swiftCode).Scan(&isHeadquarter)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				WriteJSON(w, http.StatusNotFound, ApiError{Message: "Swift code not found"})
+				return
+			}
+			WriteJSON(w, http.StatusInternalServerError, ApiError{Message: "Database error"})
+			return
+		}
+
+		if isHeadquarter {
+			prefix := swiftCode[:7]
+			_, err = tx.Exec("DELETE FROM swift_codes WHERE swift_code LIKE $1 || '%' AND swift_code != $2", prefix, swiftCode)
+			if err != nil {
+				WriteJSON(w, http.StatusInternalServerError, ApiError{Message: "Database error"})
+				return
+			}
+		}
+
+		_, err = tx.Exec("DELETE FROM swift_codes WHERE swift_code = $1", swiftCode)
+		if err != nil {
+			WriteJSON(w, http.StatusInternalServerError, ApiError{Message: "Database error"})
+			return
+		}
+
+		if err = tx.Commit(); err != nil {
+			WriteJSON(w, http.StatusInternalServerError, ApiError{Message: "Database error"})
+			return
+		}
+
+		WriteJSON(w, http.StatusOK, ApiError{Message: "Swift code deleted successfully"})
+	})
 }
