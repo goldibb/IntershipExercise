@@ -7,6 +7,7 @@ import (
 	"errors"
 	"github.com/gorilla/mux"
 	"net/http"
+	"strings"
 )
 
 type ApiError struct {
@@ -188,8 +189,10 @@ func (h *Handler) getSwiftCodesByCountry() http.Handler {
 
 func (h *Handler) CreateSwiftCode() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Content-Type") != "application/json" {
-			http.Error(w, `{"message":"Content-Type must be application/json"}`, http.StatusUnsupportedMediaType)
+		contentType := r.Header.Get("Content-Type")
+		if contentType != "application/json" && contentType != "Application/json" &&
+			!strings.HasPrefix(strings.ToLower(contentType), "application/json") {
+			WriteJSON(w, http.StatusUnsupportedMediaType, ApiError{Message: "Content-Type must be application/json"})
 			return
 		}
 		var swiftCode models.Branch
