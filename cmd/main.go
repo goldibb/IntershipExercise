@@ -4,9 +4,31 @@ import (
 	"IntershipExercise/cmd/api"
 	"IntershipExercise/internal/db"
 	"IntershipExercise/pkg/parser"
+	"fmt"
 	"log"
+	"os"
+	"path/filepath"
 )
 
+func findExcelFile() (string, error) {
+	fileName := "Interns_2025_SWIFT_CODES.xlsx"
+	searchPaths := []string{
+		"/data",   // Docker mounted volume
+		"C:/data", // Windows local path
+		"./data",
+		"c:/data", // Local relative path
+	}
+
+	for _, basePath := range searchPaths {
+		fullPath := filepath.Join(basePath, fileName)
+		if _, err := os.Stat(fullPath); err == nil {
+			log.Printf("Found file at: %s", fullPath)
+			return fullPath, nil
+		}
+	}
+
+	return "", fmt.Errorf("excel file %s not found in search paths", fileName)
+}
 func main() {
 	err := db.OpenDatabase()
 	if err != nil {
@@ -19,7 +41,13 @@ func main() {
 		}
 	}()
 
-	data, err := parser.ParsedExcelFile("c:/data/Interns_2025_SWIFT_CODES.xlsx")
+	filePath, err := findExcelFile()
+	if err != nil {
+		log.Fatalf("Error finding Excel file: %v", err)
+	}
+
+	log.Printf("Found Excel file at: %s", filePath)
+	data, err := parser.ParsedExcelFile(filePath)
 	if err != nil {
 		log.Fatalf("Error parsing Excel file: %v", err)
 	}

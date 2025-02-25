@@ -188,14 +188,18 @@ func (h *Handler) getSwiftCodesByCountry() http.Handler {
 
 func (h *Handler) CreateSwiftCode() http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Content-Type") != "application/json" {
+			http.Error(w, `{"message":"Content-Type must be application/json"}`, http.StatusUnsupportedMediaType)
+			return
+		}
 		var swiftCode models.Branch
 		if err := json.NewDecoder(r.Body).Decode(&swiftCode); err != nil {
 			WriteJSON(w, http.StatusBadRequest, ApiError{Message: "Invalid request payload"})
 			return
 		}
 
-		if len(swiftCode.SwiftCode) != 8 && len(swiftCode.SwiftCode) != 11 {
-			WriteJSON(w, http.StatusBadRequest, ApiError{Message: "SWIFT code must be 8 or 11 characters long"})
+		if len(swiftCode.SwiftCode) != 11 {
+			WriteJSON(w, http.StatusBadRequest, ApiError{Message: "SWIFT code must be 11 characters long"})
 			return
 		}
 

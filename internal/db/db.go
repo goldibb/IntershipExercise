@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"time"
 
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -13,29 +14,45 @@ import (
 var DB *sql.DB
 
 func OpenDatabase() error {
-	var err error
-
 	if err := godotenv.Load(); err != nil {
-		return fmt.Errorf("error loading .env file: %w", err)
+		// Ignore error in production where env vars are set directly
+		fmt.Printf("Notice: .env file not loaded: %v\n", err)
 	}
+
 	dbInfo := fmt.Sprintf(
 		"host=%s port=%s user=%s password=%s dbname=%s sslmode=disable",
-		os.Getenv("DB_HOST"),
-		os.Getenv("DB_PORT"),
-		os.Getenv("DB_USER"),
-		os.Getenv("DB_PASSWORD"),
-		os.Getenv("DB_NAME"),
+		getEnv("DB_HOST", "localhost"),
+		getEnv("DB_PORT", "5432"),
+		getEnv("DB_USER", "postgres"),
+		getEnv("DB_PASSWORD", "postgres"),
+		getEnv("DB_NAME", "swift_codes"),
 	)
 
-	DB, err = sql.Open("postgres", dbInfo)
-	if err != nil {
-		return err
+	var err error
+	maxRetries := 5
+	for i := 0; i < maxRetries; i++ {
+		DB, err = sql.Open("postgres", dbInfo)
+		if err != nil {
+			return fmt.Errorf("error opening database: %w", err)
+		}
+
+		err = DB.Ping()
+		if err == nil {
+			return nil
+		}
+
+		fmt.Printf("Failed to connect to database (attempt %d/%d): %v\n", i+1, maxRetries, err)
+		time.Sleep(time.Second * 2)
 	}
 
-	if err = DB.Ping(); err != nil {
-		return err
+	return fmt.Errorf("failed to connect to database after %d attempts: %w", maxRetries, err)
+}
+
+func getEnv(key, fallback string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
 	}
-	return nil
+	return fallback
 }
 func CloseDatabase() error {
 	return DB.Close()

@@ -14,10 +14,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
-    volumes:
-      - ./data:/data
     networks:
       - swift_network
+    volumes:
+      - C:/data:/data
 
   db:
     image: postgres:16-alpine
@@ -33,7 +33,7 @@ services:
     networks:
       - swift_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U postgres -d swift_codes"]
       interval: 5s
       timeout: 5s
       retries: 5
