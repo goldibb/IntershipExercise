@@ -29,13 +29,13 @@ List all SWIFT codes for a specific country.
 ### POST `/v1/swift-codes`
 Create a new SWIFT code entry.
 ```bash
-curl -X POST http://localhost:8080/swift-codes -H "Content-Type: application/json" -d '{"swiftCode":"BNPAFRPP123","address":"16 Boulevard des Italiens","bankName":"BNP Paribas","countryISO2":"PL","isHeadquarter":false}'
+curl -X POST http://localhost:8080/v1/swift-codes -H "Content-Type: application/json" -d '{"swiftCode":"BNPAFRPP123","address":"16 Boulevard des Italiens","bankName":"BNP Paribas","countryISO2":"PL","isHeadquarter":false}'
 ```
 
 ### DELETE `/v1/swift-codes/{swift_code}`
 Delete a SWIFT code. If the code is a headquarter, all associated branches will be deleted.
 ```Bash
-curl -X DELETE http://localhost:8080/swift-codes/BNPAFRPP123
+curl -X DELETE http://localhost:8080/v1/swift-codes/BNPAFRPP123
 ```
 ## Setup
 
